@@ -206,6 +206,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 let booklets = [];
+let categories = [];
 let settings = {};
 let activeYear = 'הכל';
 let activeTopic = 'הכל';
@@ -217,6 +218,11 @@ async function init() {
     const settingsDoc = await getDoc(doc(db, 'config', 'settings'));
     if (settingsDoc.exists()) settings = settingsDoc.data();
   } catch(e) { console.log('Settings load error', e); }
+
+  // Load categories
+  onSnapshot(collection(db, 'categories'), snap => {
+    categories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  });
 
   // Listen to booklets in real-time
   onSnapshot(collection(db, 'booklets'), (snapshot) => {
@@ -520,9 +526,6 @@ input:checked+.slider{background:#1a3a5c}input:checked+.slider:before{transform:
         <label>קטגוריה</label>
         <select id="f-cat">
           <option value="">בחר קטגוריה</option>
-          <optgroup label="לפי שנה"><option>התשפ״ה</option><option>התשפ״ד</option><option>התשפ״ג</option><option>התשפ״ב</option><option>התשפ״א</option></optgroup>
-          <optgroup label="חגים ומועדים"><option>ראש השנה</option><option>יום כיפור</option><option>סוכות</option><option>חנוכה</option><option>פורים</option><option>חג הפסח</option><option>שבועות</option></optgroup>
-          <optgroup label="אחר"><option>פרשת השבוע</option><option>אחר</option></optgroup>
         </select>
       </div>
       <div class="fg"><label>תיאור קצר</label><textarea id="f-desc" placeholder="תיאור המאמר בקצרה..."></textarea></div>
@@ -548,6 +551,30 @@ input:checked+.slider{background:#1a3a5c}input:checked+.slider:before{transform:
       </table>
     </div>
   </div>
+
+  <!-- CATEGORIES -->
+  <div style="margin-top:20px">
+    <div class="card">
+      <h3>🏷️ ניהול קטגוריות</h3>
+      <div style="display:flex;gap:10px;margin-bottom:16px;align-items:flex-end;flex-wrap:wrap">
+        <div class="fg" style="flex:1;margin:0">
+          <label>שם קטגוריה</label>
+          <input type="text" id="cat-name" placeholder='למשל: "התשפ״ו" או "חנוכה"' />
+        </div>
+        <div class="fg" style="flex:1;margin:0">
+          <label>סוג</label>
+          <select id="cat-type">
+            <option value="שנה">לפי שנה</option>
+            <option value="חג">חגים ומועדים</option>
+            <option value="אחר">אחר</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="saveCat()" id="cat-btn" style="flex:none;padding:10px 20px">➕ הוסף</button>
+        <button class="btn btn-outline" onclick="resetCat()" style="flex:none;padding:10px 16px">ביטול</button>
+      </div>
+      <div id="cat-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+    </div>
+  </div>
 </main>
 <div class="toast" id="toast"></div>
 
@@ -570,8 +597,9 @@ const app = initializeApp({
 const db = getFirestore(app);
 
 let books = [];
+let cats = [];
 let cfg = ${settingsJson};
-let editId = null;
+let editId = null, editCatId = null;
 let pdfFile = null, imgFile = null;
 
 // init toggles
@@ -579,11 +607,17 @@ document.getElementById('tg-total').checked = !!cfg.showTotal;
 document.getElementById('tg-views').checked = !!cfg.showViews;
 document.getElementById('tg-dl').checked = !!cfg.showDownloads;
 
-// real-time listener
+// real-time listeners
 onSnapshot(collection(db,'booklets'), snap => {
   books = snap.docs.map(d=>({id:d.id,...d.data()}));
   books.sort((a,b)=>(a.order||0)-(b.order||0)||a.title.localeCompare(b.title,'he'));
   renderStats(); renderTable();
+});
+
+onSnapshot(collection(db,'categories'), snap => {
+  cats = snap.docs.map(d=>({id:d.id,...d.data()}));
+  cats.sort((a,b)=>a.name.localeCompare(b.name,'he'));
+  renderCatSelect(); renderCatList();
 });
 
 function renderStats(){
@@ -718,6 +752,69 @@ window.saveSetting = async function(key, val) {
   cfg[key]=val;
   try { await setDoc(doc(db,'config','settings'), cfg, {merge:true}); showToast('✅ הגדרה נשמרה'); }
   catch(e){ showToast('❌ שגיאה בשמירת הגדרה'); }
+};
+
+function renderCatSelect() {
+  const sel = document.getElementById('f-cat');
+  const cur = sel.value;
+  const groups = { 'שנה': 'לפי שנה', 'חג': 'חגים ומועדים', 'אחר': 'אחר' };
+  let html = '<option value="">בחר קטגוריה</option>';
+  for (const [type, label] of Object.entries(groups)) {
+    const group = cats.filter(c => c.type === type);
+    if (group.length) {
+      html += \`<optgroup label="\${label}">\${group.map(c=>\`<option value="\${c.name}">\${c.name}</option>\`).join('')}</optgroup>\`;
+    }
+  }
+  sel.innerHTML = html;
+  if (cur) sel.value = cur;
+}
+
+function renderCatList() {
+  const typeLabel = { 'שנה': '📅', 'חג': '🕎', 'אחר': '📌' };
+  document.getElementById('cat-list').innerHTML = cats.map(c => \`
+    <div style="display:inline-flex;align-items:center;gap:6px;background:#f4f7fa;border:2px solid #e8edf3;border-radius:20px;padding:5px 12px;font-size:13px;">
+      <span>\${typeLabel[c.type]||'📌'} \${c.name}</span>
+      <button onclick="editCat('\${c.id}')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:0 2px;" title="ערוך">✏️</button>
+      <button onclick="delCat('\${c.id}')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:0 2px;" title="מחק">🗑️</button>
+    </div>
+  \`).join('');
+}
+
+window.saveCat = async function() {
+  const name = document.getElementById('cat-name').value.trim();
+  const type = document.getElementById('cat-type').value;
+  if (!name) { showToast('⚠️ חובה שם קטגוריה'); return; }
+  document.getElementById('cat-btn').disabled = true;
+  try {
+    const id = editCatId || ('cat_' + Date.now());
+    await setDoc(doc(db, 'categories', id), { name, type }, { merge: true });
+    showToast(editCatId ? '✅ קטגוריה עודכנה' : '✅ קטגוריה נוספה');
+    resetCat();
+  } catch(e) { showToast('❌ שגיאה: ' + e.message); }
+  document.getElementById('cat-btn').disabled = false;
+};
+
+window.editCat = function(id) {
+  const c = cats.find(x => x.id === id); editCatId = id;
+  document.getElementById('cat-name').value = c.name;
+  document.getElementById('cat-type').value = c.type;
+  document.getElementById('cat-btn').textContent = '💾 עדכן';
+};
+
+window.delCat = async function(id) {
+  const c = cats.find(x => x.id === id);
+  const inUse = books.some(b => b.category === c?.name);
+  if (inUse && !confirm(\`הקטגוריה "\${c.name}" בשימוש. למחוק בכל זאת?\`)) return;
+  if (!inUse && !confirm(\`למחוק את הקטגוריה "\${c?.name}"?\`)) return;
+  try { await deleteDoc(doc(db, 'categories', id)); showToast('🗑️ נמחק'); }
+  catch(e) { showToast('❌ שגיאה במחיקה'); }
+};
+
+window.resetCat = function() {
+  editCatId = null;
+  document.getElementById('cat-name').value = '';
+  document.getElementById('cat-type').value = 'שנה';
+  document.getElementById('cat-btn').textContent = '➕ הוסף';
 };
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
