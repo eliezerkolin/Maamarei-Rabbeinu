@@ -537,9 +537,9 @@ input:checked+.slider{background:#1a3a5c}input:checked+.slider:before{transform:
 
       <div style="margin-top:20px;padding-top:16px;border-top:2px solid #d9eef9;">
         <h3 style="font-family:'Frank Ruhl Libre',serif;font-size:15px;font-weight:700;color:#1a3a5c;margin-bottom:12px;">⚙️ מה להציג לגולשים</h3>
-        <div class="toggle-row"><label class="toggle"><input type="checkbox" id="tg-total" onchange="saveSetting('showTotal',this.checked)"/><span class="slider"></span></label><span style="font-size:13px;color:#3a5068;">כמות חוברות</span></div>
-        <div class="toggle-row"><label class="toggle"><input type="checkbox" id="tg-views" onchange="saveSetting('showViews',this.checked)"/><span class="slider"></span></label><span style="font-size:13px;color:#3a5068;">מספר צפיות</span></div>
-        <div class="toggle-row"><label class="toggle"><input type="checkbox" id="tg-dl" onchange="saveSetting('showDownloads',this.checked)"/><span class="slider"></span></label><span style="font-size:13px;color:#3a5068;">מספר הורדות</span></div>
+        <div class="toggle-row"><label class="toggle"><input type="checkbox" id="tg-total" onchange="saveSetting(this.dataset.key,this.checked)" data-key="showTotal"/><span class="slider"></span></label><span style="font-size:13px;color:#3a5068;">כמות חוברות</span></div>
+        <div class="toggle-row"><label class="toggle"><input type="checkbox" id="tg-views" onchange="saveSetting(this.dataset.key,this.checked)" data-key="showViews"/><span class="slider"></span></label><span style="font-size:13px;color:#3a5068;">מספר צפיות</span></div>
+        <div class="toggle-row"><label class="toggle"><input type="checkbox" id="tg-dl" onchange="saveSetting(this.dataset.key,this.checked)" data-key="showDownloads"/><span class="slider"></span></label><span style="font-size:13px;color:#3a5068;">מספר הורדות</span></div>
       </div>
     </div>
 
