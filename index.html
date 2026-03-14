@@ -193,6 +193,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, doc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBLOrM83RtH4VToygfpo2dxG-NcpebcLiI",
@@ -200,11 +201,13 @@ const firebaseConfig = {
   projectId: "maamrei-rabenu",
   storageBucket: "maamrei-rabenu.firebasestorage.app",
   messagingSenderId: "484133741429",
-  appId: "1:484133741429:web:f9a716cc670965048be93c"
+  appId: "1:484133741429:web:f9a716cc670965048be93c",
+  measurementId: "G-HCM33QST5Q"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const analytics = getAnalytics(app);
 let booklets = [];
 let categories = [];
 let settings = {};
@@ -336,6 +339,8 @@ window.openBooklet = async function(id) {
 
   // increment views
   try { await updateDoc(doc(db,'booklets',id), { views: (b.views||0)+1 }); } catch(e){}
+  // Track in Firebase Analytics
+  logEvent(analytics, 'view_booklet', { booklet_title: b.title, booklet_id: id });
 
   const coverHtml = b.imgUrl
     ? `<img src="${b.imgUrl}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;" />`
@@ -397,6 +402,8 @@ window.downloadBooklet = async function(id) {
   if (!b) return;
   if (b.price > 0) { showToast('🛒 עמוד רכישה בקרוב'); return; }
   try { await updateDoc(doc(db,'booklets',id), { downloads: (b.downloads||0)+1 }); } catch(e){}
+  // Track in Firebase Analytics
+  logEvent(analytics, 'download_booklet', { booklet_title: b.title, booklet_id: id });
   if (b.pdfUrl) {
     window.open(b.pdfUrl, '_blank');
   } else { showToast('📋 PDF לא הועלה עדיין'); }
