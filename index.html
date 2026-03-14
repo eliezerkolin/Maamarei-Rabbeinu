@@ -442,8 +442,8 @@ window.checkLogin = async function() {
 
 // ===== ADMIN PANEL =====
 function openAdminPanel() {
-  const booksJson = JSON.stringify(booklets).replace(/</g,'\\u003c');
-  const settingsJson = JSON.stringify(settings);
+  const booksJson = JSON.stringify(booklets).replace(/</g,'\\u003c').replace(/`/g,'\\`').replace(/\$/g,'\\$');
+  const settingsJson = JSON.stringify(settings).replace(/</g,'\\u003c').replace(/`/g,'\\`').replace(/\$/g,'\\$');
   const win = window.open('', '_blank');
   win.document.write(buildAdminHtml(booksJson, settingsJson));
   win.document.close();
