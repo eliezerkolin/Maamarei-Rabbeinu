@@ -336,58 +336,10 @@ function renderBooklets(list) {
 window.openBooklet = async function(id) {
   const b = booklets.find(x => x.id === id);
   if (!b) return;
-
   // increment views
   try { await updateDoc(doc(db,'booklets',id), { views: (b.views||0)+1 }); } catch(e){}
-  // Track in Firebase Analytics
   logEvent(analytics, 'view_booklet', { booklet_title: b.title, booklet_id: id });
-
-  const coverHtml = b.imgUrl
-    ? `<img src="${b.imgUrl}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;" />`
-    : `<div style="font-size:80px;text-align:center;">📄</div>`;
-
-  const metaHtml = (settings.showViews||settings.showDownloads) ? `
-    ${settings.showViews ? `<div class="meta-item">👁 ${(b.views||0)+1} צפיות</div>` : ''}
-    ${settings.showDownloads ? `<div class="meta-item">⬇ ${b.downloads||0} הורדות</div>` : ''}
-  ` : '';
-
-  // PDF URLs
-  const pdfSection = b.pdfUrl
-    ? `<div style="margin-top:24px;">
-        <iframe src="${b.pdfUrl}" style="width:100%;height:700px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.1);" allowfullscreen></iframe>
-        <div style="text-align:center;margin-top:10px;">
-          <a href="${b.pdfUrl.replace('/preview','/view')}" target="_blank" style="font-size:13px;color:#8fa3b8;text-decoration:none;">↗ פתח ב-Google Drive</a>
-        </div>
-      </div>`
-    : `<div style="background:#f4f7fa;border-radius:16px;padding:40px;text-align:center;color:#8fa3b8;margin-top:24px;font-size:15px;">📋 קובץ PDF עדיין לא הועלה לחוברת זו</div>`;
-
-  const dlBtn = b.price > 0
-    ? `<button onclick="alert('עמוד רכישה בקרוב!')" style="background:#e8c840;color:#1a3a5c;border:none;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;font-family:Heebo,sans-serif;">💳 רכוש ₪${b.price}</button>`
-    : '';
-
-  const win = window.open('', '_blank');
-  win.document.write(`<!DOCTYPE html><html lang="he" dir="rtl"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${b.title} – סיכומים במאמרי רבינו</title>
-<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700;900&family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Heebo,sans-serif;background:#d9eef9;color:#1a2e42}header{background:linear-gradient(135deg,#1a3a5c,#2a5080);padding:14px 32px;display:flex;align-items:center;justify-content:space-between}.logo{font-family:'Frank Ruhl Libre',serif;font-size:20px;font-weight:900;color:#f5e080}.close-btn{background:rgba(255,255,255,0.15);color:white;border:none;padding:8px 18px;border-radius:8px;cursor:pointer;font-family:Heebo,sans-serif;font-size:14px}main{max-width:900px;margin:0 auto;padding:36px 24px}.card{background:white;border-radius:24px;overflow:hidden;box-shadow:0 4px 24px rgba(26,58,92,0.12)}.card-header{background:linear-gradient(135deg,#1a3a5c,#2a5080);padding:30px 32px;color:white}.tag{display:inline-block;background:rgba(232,200,64,0.25);border:1px solid rgba(232,200,64,0.5);color:#f5e080;padding:3px 14px;border-radius:12px;font-size:12px;font-weight:600;margin-bottom:12px}.title{font-family:'Frank Ruhl Libre',serif;font-size:28px;font-weight:900;margin-bottom:4px}.subtitle{font-size:13px;color:rgba(255,255,255,0.6)}.card-body{padding:32px}.layout{display:grid;grid-template-columns:240px 1fr;gap:28px;margin-bottom:16px}.cover{background:#d9eef9;border-radius:12px;display:flex;align-items:center;justify-content:center;padding:20px;border:2px solid #7ec3e8;min-height:180px}.info h3{font-family:'Frank Ruhl Libre',serif;font-size:17px;font-weight:700;color:#1a3a5c;margin-bottom:10px}.desc{font-size:15px;color:#3a5068;line-height:1.75;margin-bottom:18px}.meta{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}.meta-item{background:#f4f7fa;padding:6px 14px;border-radius:10px;font-size:13px;color:#3a5068}@media(max-width:600px){.layout{grid-template-columns:1fr}}</style></head><body>
-<header><div class="logo">סיכומים במאמרי רבינו</div><button class="close-btn" onclick="window.close()">✕ סגור</button></header>
-<main><div class="card">
-  <div class="card-header"><div class="tag">${b.category||'חוברת'}</div><div class="title">${b.title}</div><div class="subtitle">${b.category||''}</div></div>
-  <div class="card-body">
-    <div class="layout">
-      <div class="cover">${coverHtml}</div>
-      <div class="info">
-        <h3>אודות החוברת</h3>
-        <p class="desc">${b.desc||''}</p>
-        <div class="meta">${metaHtml}${b.price>0?`<div class="meta-item">💳 ₪${b.price}</div>`:'<div class="meta-item" style="background:#dcfce7;color:#166534;">✓ חינם</div>'}</div>
-        <div>${dlBtn}</div>
-      </div>
-    </div>
-    ${pdfSection}
-  </div>
-</div></main></body></html>`);
-  win.document.close();
+  window.open(`booklet.html?id=${id}`, '_blank');
 };
 
 window.countDownload = async function(id) {
