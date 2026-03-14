@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>טוען חוברת... – סיכומים במאמרי רבינו</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700;900&family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Heebo, sans-serif; background: #d9eef9; color: #1a2e42; min-height: 100vh; direction: rtl; }
+  header { background: linear-gradient(135deg, #1a3a5c, #2a5080); padding: 14px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+  .logo { font-family: 'Frank Ruhl Libre', serif; font-size: 20px; font-weight: 900; color: #f5e080; text-decoration: none; }
+  .back-btn { background: rgba(255,255,255,0.15); color: white; border: none; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-family: Heebo, sans-serif; font-size: 14px; text-decoration: none; display: inline-block; }
+  main { max-width: 900px; margin: 0 auto; padding: 36px 24px; }
+  .card { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 24px rgba(26,58,92,0.12); }
+  .card-header { background: linear-gradient(135deg, #1a3a5c, #2a5080); padding: 30px 32px; color: white; }
+  .tag { display: inline-block; background: rgba(232,200,64,0.25); border: 1px solid rgba(232,200,64,0.5); color: #f5e080; padding: 3px 14px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-bottom: 12px; }
+  .title { font-family: 'Frank Ruhl Libre', serif; font-size: 28px; font-weight: 900; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: rgba(255,255,255,0.6); }
+  .card-body { padding: 32px; }
+  .layout { display: grid; grid-template-columns: 240px 1fr; gap: 28px; margin-bottom: 16px; }
+  .cover { background: #d9eef9; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 20px; border: 2px solid #7ec3e8; min-height: 180px; overflow: hidden; }
+  .cover img { width: 100%; height: 100%; object-fit: contain; border-radius: 8px; }
+  .info h3 { font-family: 'Frank Ruhl Libre', serif; font-size: 17px; font-weight: 700; color: #1a3a5c; margin-bottom: 10px; }
+  .desc { font-size: 15px; color: #3a5068; line-height: 1.75; margin-bottom: 18px; }
+  .meta { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+  .meta-item { background: #f4f7fa; padding: 6px 14px; border-radius: 10px; font-size: 13px; color: #3a5068; }
+  .loading { text-align: center; padding: 80px 20px; color: #8fa3b8; font-size: 16px; }
+  .loading-spinner { width: 40px; height: 40px; border: 3px solid rgba(26,58,92,0.15); border-top-color: #1a3a5c; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (max-width: 600px) { .layout { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="index.html">סיכומים במאמרי רבינו</a>
+  <a class="back-btn" href="index.html">← חזרה</a>
+</header>
+
+<main id="main">
+  <div class="loading">
+    <div class="loading-spinner"></div>
+    טוען חוברת...
+  </div>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyBLOrM83RtH4VToygfpo2dxG-NcpebcLiI",
+  authDomain: "maamrei-rabenu.firebaseapp.com",
+  projectId: "maamrei-rabenu",
+  storageBucket: "maamrei-rabenu.firebasestorage.app",
+  messagingSenderId: "484133741429",
+  appId: "1:484133741429:web:f9a716cc670965048be93c",
+  measurementId: "G-HCM33QST5Q"
+});
+const db = getFirestore(app);
+const analytics = getAnalytics(app);
+
+// Get booklet ID from URL
+const id = new URLSearchParams(window.location.search).get('id');
+
+async function load() {
+  if (!id) { showError('לא נמצא מזהה חוברת'); return; }
+
+  const snap = await getDoc(doc(db, 'booklets', id));
+  if (!snap.exists()) { showError('החוברת לא נמצאה'); return; }
+
+  const b = { id: snap.id, ...snap.data() };
+
+  // Update page title
+  document.title = `${b.title} – סיכומים במאמרי רבינו`;
+
+  // Load settings for show/hide stats
+  let settings = {};
+  try {
+    const s = await getDoc(doc(db, 'config', 'settings'));
+    if (s.exists()) settings = s.data();
+  } catch(e) {}
+
+  const metaHtml = (settings.showViews || settings.showDownloads) ? `
+    ${settings.showViews ? `<div class="meta-item">👁 ${b.views||0} צפיות</div>` : ''}
+    ${settings.showDownloads ? `<div class="meta-item">⬇ ${b.downloads||0} הורדות</div>` : ''}
+  ` : '';
+
+  const pdfSection = b.pdfUrl
+    ? `<div style="margin-top:24px;">
+        <iframe src="${b.pdfUrl}" style="width:100%;height:700px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.1);" allowfullscreen></iframe>
+        <div style="text-align:center;margin-top:10px;">
+          <a href="${b.pdfUrl.replace('/preview','/view')}" target="_blank" style="font-size:13px;color:#8fa3b8;text-decoration:none;">↗ פתח ב-Google Drive</a>
+        </div>
+      </div>`
+    : `<div style="background:#f4f7fa;border-radius:16px;padding:40px;text-align:center;color:#8fa3b8;margin-top:24px;font-size:15px;">📋 קובץ PDF עדיין לא הועלה לחוברת זו</div>`;
+
+  const priceBtn = b.price > 0
+    ? `<button onclick="alert('עמוד רכישה בקרוב!')" style="background:#e8c840;color:#1a3a5c;border:none;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;font-family:Heebo,sans-serif;">💳 רכוש ₪${b.price}</button>`
+    : '';
+
+  document.getElementById('main').innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div class="tag">${b.category || 'חוברת'}</div>
+        <div class="title">${b.title}</div>
+        <div class="subtitle">${b.category || ''}</div>
+      </div>
+      <div class="card-body">
+        <div class="layout">
+          <div class="cover">
+            ${b.imgUrl ? `<img src="${b.imgUrl}" alt="${b.title}" />` : '<div style="font-size:64px;text-align:center;">📄</div>'}
+          </div>
+          <div class="info">
+            <h3>אודות החוברת</h3>
+            <p class="desc">${b.desc || ''}</p>
+            <div class="meta">
+              ${metaHtml}
+              ${b.price > 0 ? `<div class="meta-item">💳 ₪${b.price}</div>` : '<div class="meta-item" style="background:#dcfce7;color:#166534;">✓ חינם</div>'}
+            </div>
+            ${priceBtn}
+          </div>
+        </div>
+        ${pdfSection}
+      </div>
+    </div>
+  `;
+}
+
+function showError(msg) {
+  document.getElementById('main').innerHTML = `<div class="loading">${msg}</div>`;
+}
+
+load();
+</script>
+</body>
+</html>
