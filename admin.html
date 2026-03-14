@@ -128,7 +128,7 @@ input:checked+.slider{background:#1a3a5c}input:checked+.slider:before{transform:
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
   apiKey:"AIzaSyBLOrM83RtH4VToygfpo2dxG-NcpebcLiI",
@@ -145,10 +145,17 @@ let cats = [];
 let cfg = {};
 let editId = null, editCatId = null;
 
-// init toggles
-document.getElementById('tg-total').checked = !!cfg.showTotal;
-document.getElementById('tg-views').checked = !!cfg.showViews;
-document.getElementById('tg-dl').checked = !!cfg.showDownloads;
+// Load settings from Firestore first, then init toggles
+async function loadSettings() {
+  try {
+    const snap = await getDoc(doc(db,'config','settings'));
+    if (snap.exists()) cfg = snap.data();
+  } catch(e) {}
+  document.getElementById('tg-total').checked = !!cfg.showTotal;
+  document.getElementById('tg-views').checked = !!cfg.showViews;
+  document.getElementById('tg-dl').checked = !!cfg.showDownloads;
+}
+loadSettings();
 
 // real-time listeners
 onSnapshot(collection(db,'booklets'), snap => {
@@ -186,14 +193,13 @@ function renderTable(){
   `).join('');
 }
 
-function handleImg(inp){ imgFile=inp.files[0]; if(imgFile) document.getElementById('img-name').textContent='✅ '+imgFile.name; }
-document.getElementById('img-up').onchange=e=>handleImg(e.target);
+
 
 // Convert Google Drive share URL to embed/preview URL
 function convertDriveUrl(url) {
   if (!url) return '';
   if (url.includes('/preview') || url.includes('/uc?')) return url;
-  const match = url.match(//d/([a-zA-Z0-9_-]+)/);
+  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
   if (match) return `https://drive.google.com/file/d/${match[1]}/preview`;
   return url;
 }
@@ -202,7 +208,7 @@ function convertDriveUrl(url) {
 function convertDriveImgUrl(url) {
   if (!url) return '';
   if (!url.includes('drive.google.com')) return url;
-  const match = url.match(//d/([a-zA-Z0-9_-]+)/);
+  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
   if (match) return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w600`;
   return url;
 }
