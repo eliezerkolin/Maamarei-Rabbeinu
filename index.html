@@ -348,20 +348,18 @@ window.openBooklet = async function(id) {
 
   // PDF URLs
   const pdfSection = b.pdfUrl
-    ? `<div style="background:#f4f7fa;border-radius:16px;padding:32px;text-align:center;margin-top:24px;">
-        <div style="font-size:48px;margin-bottom:12px;">📄</div>
-        <p style="font-size:15px;color:#3a5068;margin-bottom:20px;">לחץ לפתיחת החוברת</p>
-        <a href="${b.pdfUrl}" target="_blank" onclick="countDownload('${id}')"
-          style="display:inline-block;background:#1a3a5c;color:white;padding:14px 36px;border-radius:12px;font-size:16px;font-weight:700;text-decoration:none;font-family:Heebo,sans-serif;">
-          📖 פתח לצפייה
-        </a>
+    ? `<div style="margin-top:24px;">
+        <iframe src="${b.pdfUrl}" style="width:100%;height:700px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.1);" allowfullscreen></iframe>
+        <div style="text-align:center;margin-top:10px;">
+          <a href="${b.pdfUrl.replace('/preview','/view')}" target="_blank" style="font-size:13px;color:#8fa3b8;text-decoration:none;">↗ פתח ב-Google Drive</a>
+        </div>
       </div>`
     : `<div style="background:#f4f7fa;border-radius:16px;padding:40px;text-align:center;color:#8fa3b8;margin-top:24px;font-size:15px;">📋 קובץ PDF עדיין לא הועלה לחוברת זו</div>`;
 
   const dlBtn = b.price > 0
     ? `<button onclick="alert('עמוד רכישה בקרוב!')" style="background:#e8c840;color:#1a3a5c;border:none;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;font-family:Heebo,sans-serif;">💳 רכוש ₪${b.price}</button>`
     : b.pdfUrl
-      ? `<a href="${b.pdfUrl}" target="_blank" style="background:#1a3a5c;color:white;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:700;text-decoration:none;display:inline-block;font-family:Heebo,sans-serif;" onclick="countDownload('${id}')">⬇ הורד חינם</a>`
+      ? `<a href="${b.pdfUrl.replace('/preview','/view')}" target="_blank" style="background:#1a3a5c;color:white;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:700;text-decoration:none;display:inline-block;font-family:Heebo,sans-serif;" onclick="countDownload('${id}')">⬇ הורד חינם</a>`
       : `<span style="background:#e8edf3;color:#8fa3b8;padding:14px 28px;border-radius:12px;font-size:14px;">הורדה אינה זמינה עדיין</span>`;
 
   const win = window.open('', '_blank');
@@ -479,8 +477,6 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px}
 .btn{padding:10px 20px;border-radius:9px;border:none;font-family:Heebo,sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s}
 .btn-primary{background:#1a3a5c;color:white}.btn-primary:hover{background:#2a5080}
 .btn-outline{background:white;color:#1a3a5c;border:2px solid #7ec3e8}
-.progress-bar{height:6px;background:#e8edf3;border-radius:3px;margin-top:8px;overflow:hidden;display:none}
-.progress-fill{height:100%;background:#1a3a5c;border-radius:3px;transition:width 0.3s;width:0%}
 .tbl{width:100%;border-collapse:collapse;font-size:13px}
 .tbl th{background:#1a3a5c;color:white;padding:9px 11px;text-align:right;font-weight:600}
 .tbl th:first-child{border-radius:0 9px 0 0}.tbl th:last-child{border-radius:9px 0 0 0}
@@ -514,21 +510,17 @@ input:checked+.slider{background:#1a3a5c}input:checked+.slider:before{transform:
   <div class="admin-grid">
     <div class="card">
       <h3 id="form-title">➕ הוסף חוברת חדשה</h3>
-      <div class="upload-area" onclick="document.getElementById('pdf-up').click()">
-        <div style="font-size:26px;margin-bottom:4px">📄</div>
-        <strong style="font-size:13px">העלאת קובץ PDF</strong>
-        <p id="pdf-name" style="font-size:11px;color:#3a5068;margin-top:3px">לחץ לבחירה</p>
-        <div class="progress-bar" id="pdf-progress"><div class="progress-fill" id="pdf-fill"></div></div>
-        <input type="file" id="pdf-up" accept=".pdf" style="display:none" onchange="handlePdf(this)"/>
-      </div>
-      <div class="upload-area" onclick="document.getElementById('img-up').click()" style="padding:12px">
-        <div style="font-size:20px;margin-bottom:3px">🖼️</div>
-        <strong style="font-size:12px">תמונת שער</strong>
-        <p id="img-name" style="font-size:11px;color:#3a5068;margin-top:2px">JPG / PNG (אופציונלי)</p>
-        <div class="progress-bar" id="img-progress"><div class="progress-fill" id="img-fill"></div></div>
-        <input type="file" id="img-up" accept="image/*" style="display:none" onchange="handleImg(this)"/>
+      <div class="fg">
+        <label>🖼️ קישור תמונת שער</label>
+        <input type="text" id="f-img-url" placeholder="הדבק קישור תמונה (Google Drive / כל קישור אחר)..." />
+        <p style="font-size:11px;color:#8fa3b8;margin-top:4px">ב-Google Drive: שתף את התמונה ← כל מי שיש לו קישור ← העתק קישור</p>
       </div>
       <br/>
+      <div class="fg">
+        <label>🔗 קישור PDF (Google Drive)</label>
+        <input type="text" id="f-pdf-url" placeholder="הדבק קישור שיתוף מ-Google Drive..." />
+        <p style="font-size:11px;color:#8fa3b8;margin-top:4px">ב-Google Drive: לחץ ימני על הקובץ ← שתף ← כל מי שיש לו קישור ← העתק קישור</p>
+      </div>
       <div class="fg"><label>שם המאמר / החוברת *</label><input type="text" id="f-title" placeholder='למשל: "ויצא יעקב"'/></div>
       <div class="fg">
         <label>קטגוריה</label>
@@ -590,10 +582,6 @@ input:checked+.slider{background:#1a3a5c}input:checked+.slider:before{transform:
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// Cloudinary config
-const CLOUDINARY_CLOUD = 'dl1oq3swb';
-const CLOUDINARY_PRESET = 'maamrei_upload';
-
 const app = initializeApp({
   apiKey:"AIzaSyBLOrM83RtH4VToygfpo2dxG-NcpebcLiI",
   authDomain:"maamrei-rabenu.firebaseapp.com",
@@ -608,7 +596,6 @@ let books = [];
 let cats = [];
 let cfg = ${settingsJson};
 let editId = null, editCatId = null;
-let pdfFile = null, imgFile = null;
 
 // init toggles
 document.getElementById('tg-total').checked = !!cfg.showTotal;
@@ -651,34 +638,25 @@ function renderTable(){
   \`).join('');
 }
 
-function handlePdf(inp){ pdfFile=inp.files[0]; if(pdfFile) document.getElementById('pdf-name').textContent='✅ '+pdfFile.name; }
 function handleImg(inp){ imgFile=inp.files[0]; if(imgFile) document.getElementById('img-name').textContent='✅ '+imgFile.name; }
-document.getElementById('pdf-up').onchange=e=>handlePdf(e.target);
 document.getElementById('img-up').onchange=e=>handleImg(e.target);
 
-// Upload to Cloudinary
-async function uploadToCloudinary(file, progressId, fillId, resourceType='auto') {
-  document.getElementById(progressId).style.display='block';
-  return new Promise((resolve, reject) => {
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('upload_preset', CLOUDINARY_PRESET);
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', \`https://api.cloudinary.com/v1_1/\${CLOUDINARY_CLOUD}/\${resourceType}/upload\`);
-    xhr.upload.onprogress = e => {
-      if(e.lengthComputable) {
-        const pct = Math.round(e.loaded/e.total*100);
-        document.getElementById(fillId).style.width = pct+'%';
-      }
-    };
-    xhr.onload = () => {
-      document.getElementById(progressId).style.display='none';
-      if(xhr.status===200) resolve(JSON.parse(xhr.responseText).secure_url);
-      else reject(new Error('Upload failed: '+xhr.responseText));
-    };
-    xhr.onerror = () => reject(new Error('Network error'));
-    xhr.send(fd);
-  });
+// Convert Google Drive share URL to embed/preview URL
+function convertDriveUrl(url) {
+  if (!url) return '';
+  if (url.includes('/preview') || url.includes('/uc?')) return url;
+  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (match) return \`https://drive.google.com/file/d/\${match[1]}/preview\`;
+  return url;
+}
+
+// Convert Google Drive image URL to direct image URL
+function convertDriveImgUrl(url) {
+  if (!url) return '';
+  if (!url.includes('drive.google.com')) return url;
+  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (match) return \`https://drive.google.com/thumbnail?id=\${match[1]}&sz=w600\`;
+  return url;
 }
 
 window.saveBook = async function() {
@@ -690,16 +668,10 @@ window.saveBook = async function() {
   try {
     const id = editId || ('booklet_'+Date.now());
     const existing = editId ? books.find(x=>x.id===editId) : {};
-    let pdfUrl = existing?.pdfUrl||'';
-    let imgUrl = existing?.imgUrl||'';
-
-    if(pdfFile) {
-      showToast('⏳ מעלה PDF...');
-      pdfUrl = await uploadToCloudinary(pdfFile, 'pdf-progress', 'pdf-fill', 'auto');
-    }    if(imgFile) {
-      showToast('⏳ מעלה תמונה...');
-      imgUrl = await uploadToCloudinary(imgFile, 'img-progress', 'img-fill', 'image');
-    }
+    const rawPdfUrl = document.getElementById('f-pdf-url').value.trim();
+    const rawImgUrl = document.getElementById('f-img-url').value.trim();
+    const pdfUrl = rawPdfUrl ? convertDriveUrl(rawPdfUrl) : (existing?.pdfUrl||'');
+    const imgUrl = rawImgUrl ? convertDriveImgUrl(rawImgUrl) : (existing?.imgUrl||'');
 
     const data = {
       title,
@@ -730,10 +702,9 @@ window.editBook = function(id) {
   document.getElementById('f-cat').value=b.category||'';
   document.getElementById('f-desc').value=b.desc||'';
   document.getElementById('f-price').value=b.price||0;
+  document.getElementById('f-pdf-url').value=b.pdfUrl||'';
+  document.getElementById('f-img-url').value=b.imgUrl||'';
   document.getElementById('form-title').textContent='✏️ ערוך חוברת';
-  pdfFile=null; imgFile=null;
-  document.getElementById('pdf-name').textContent=b.pdfUrl?'✅ קובץ קיים':'לחץ לבחירה';
-  document.getElementById('img-name').textContent=b.imgUrl?'✅ תמונה קיימת':'JPG / PNG (אופציונלי)';
   window.scrollTo({top:0,behavior:'smooth'});
 };
 
@@ -746,12 +717,10 @@ window.delBook = async function(id) {
 };
 
 window.resetForm = function() {
-  editId=null; pdfFile=null; imgFile=null;
-  ['f-title','f-desc'].forEach(i=>document.getElementById(i).value='');
+  editId=null;
+  ['f-title','f-desc','f-pdf-url','f-img-url'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('f-cat').value='';
   document.getElementById('f-price').value='0';
-  document.getElementById('pdf-name').textContent='לחץ לבחירה';
-  document.getElementById('img-name').textContent='JPG / PNG (אופציונלי)';
   document.getElementById('form-title').textContent='➕ הוסף חוברת חדשה';
 };
 
