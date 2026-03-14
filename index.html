@@ -353,7 +353,7 @@ window.openBooklet = async function(id) {
   // increment views
   try { await updateDoc(doc(db,'booklets',id), { views: (b.views||0)+1 }); } catch(e){}
   logEvent(analytics, 'view_booklet', { booklet_title: b.title, booklet_id: id });
-  window.open(`booklet.html?id=${id}`, '_blank');
+  window.location.href = `booklet.html?id=${id}`;
 };
 
 window.countDownload = async function(id) {
