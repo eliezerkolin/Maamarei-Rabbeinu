@@ -210,7 +210,7 @@
 <!-- Firebase SDKs -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, doc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, doc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
 
 const firebaseConfig = {
@@ -371,8 +371,11 @@ function renderBooklets(list) {
 window.openBooklet = async function(id) {
   const b = booklets.find(x => x.id === id);
   if (!b) return;
-  // increment views
-  try { await updateDoc(doc(db,'booklets',id), { views: (b.views||0)+1 }); } catch(e){}
+  const today = new Date().toISOString().split('T')[0];
+  try {
+    await updateDoc(doc(db,'booklets',id), { views: (b.views||0)+1 });
+    await setDoc(doc(db,`booklet_stats/${id}/daily`,today), { views: increment(1) }, { merge: true });
+  } catch(e){}
   logEvent(analytics, 'view_booklet', { booklet_title: b.title, booklet_id: id });
   window.location.href = `booklet.html?id=${id}`;
 };
@@ -391,9 +394,10 @@ window.downloadBooklet = async function(id) {
   if (!b) return;
   if (b.price > 0) { showToast('🛒 עמוד רכישה בקרוב'); return; }
   if (!b.pdfUrl) { showToast('📋 PDF לא הועלה עדיין'); return; }
-  // Count download before opening
+  const today = new Date().toISOString().split('T')[0];
   try {
     await updateDoc(doc(db,'booklets',id), { downloads: (b.downloads||0)+1 });
+    await setDoc(doc(db,`booklet_stats/${id}/daily`,today), { downloads: increment(1) }, { merge: true });
     logEvent(analytics, 'download_booklet', { booklet_title: b.title, booklet_id: id });
   } catch(e) {}
   window.open(b.pdfUrl.replace('/preview','/view'), '_blank');
