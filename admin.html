@@ -411,19 +411,6 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 
 // ===== LOGIN GATE =====
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-const app = initializeApp({
-  apiKey:"AIzaSyBLOrM83RtH4VToygfpo2dxG-NcpebcLiI",
-  authDomain:"maamrei-rabenu.firebaseapp.com",
-  projectId:"maamrei-rabenu",
-  storageBucket:"maamrei-rabenu.firebasestorage.app",
-  messagingSenderId:"484133741429",
-  appId:"1:484133741429:web:f9a716cc670965048be93c"
-});
-const db = getFirestore(app);
-
 window.checkGate = async function() {
   const inp = document.getElementById('gate-pass');
   const entered = inp.value;
