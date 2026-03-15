@@ -66,8 +66,8 @@ input:checked+.slider{background:#1a3a5c}input:checked+.slider:before{transform:
     </div>
     <div class="login-box-body">
       <label>סיסמה</label>
-      <input type="password" id="gate-pass" placeholder="הכנס סיסמה..." onkeydown="if(event.key==='Enter')checkGate()" />
-      <button onclick="checkGate()">כניסה</button>
+      <input type="password" id="gate-pass" placeholder="הכנס סיסמה..." onkeydown="if(event.key==='Enter')window.checkGate()" />
+      <button onclick="window.checkGate()">כניסה</button>
     </div>
   </div>
 </div>
@@ -308,6 +308,8 @@ window.moveBook = async function(id, direction) {
     showToast('❌ שגיאה בעדכון סדר');
   }
 };
+
+window.editBook = function(id) {
   const b=books.find(x=>x.id===id); editId=id;
   document.getElementById('f-title').value=b.title||'';
   document.getElementById('f-cat').value=b.category||'';
