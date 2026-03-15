@@ -101,10 +101,8 @@ input:checked+.slider{background:#1a3a5c}input:checked+.slider:before{transform:
       </div>
       <div class="fg"><label>שם המאמר / החוברת *</label><input type="text" id="f-title" placeholder="למשל: ויצא יעקב"/></div>
       <div class="fg">
-        <label>קטגוריה</label>
-        <select id="f-cat">
-          <option value="">בחר קטגוריה</option>
-        </select>
+        <label>קטגוריות (אפשר לבחור כמה)</label>
+        <div id="f-cats-list" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:#f4f7fa;border-radius:9px;border:2px solid #e8edf3;min-height:40px;"></div>
       </div>
       <div class="fg"><label>תיאור קצר</label><textarea id="f-desc" placeholder="תיאור המאמר בקצרה..."></textarea></div>
       <div class="fg"><label>מחיר ₪ (0 = חינם)</label><input type="number" id="f-price" value="0" min="0"/></div>
@@ -219,7 +217,7 @@ function renderTable(){
         </div>
       </td>
       <td><strong>${b.title}</strong></td>
-      <td>${b.category||''}</td>
+      <td>${(Array.isArray(b.categories)?b.categories:(b.category?[b.category]:[])).join(', ')||''}</td>
       <td>${b.views||0}</td>
       <td>${b.downloads||0}</td>
       <td><span class="badge ${b.price>0?'badge-paid':'badge-free'}">${b.price>0?'₪'+b.price:'חינם'}</span></td>
@@ -267,7 +265,7 @@ window.saveBook = async function() {
 
     const data = {
       title,
-      category: document.getElementById('f-cat').value,
+      categories: getSelectedCats(),
       desc: document.getElementById('f-desc').value.trim(),
       price: parseFloat(document.getElementById('f-price').value)||0,
       pdfUrl, imgUrl,
@@ -312,7 +310,14 @@ window.moveBook = async function(id, direction) {
 window.editBook = function(id) {
   const b=books.find(x=>x.id===id); editId=id;
   document.getElementById('f-title').value=b.title||'';
-  document.getElementById('f-cat').value=b.category||'';
+  // Set selected categories
+  const existingCats = Array.isArray(b.categories) ? b.categories : (b.category ? [b.category] : []);
+  setTimeout(() => {
+    document.querySelectorAll('input[name="f-cat-cb"]').forEach(cb => {
+      cb.checked = existingCats.includes(cb.value);
+      cb.closest('label').style.borderColor = cb.checked ? '#1a3a5c' : '#e8edf3';
+    });
+  }, 50);
   document.getElementById('f-desc').value=b.desc||'';
   document.getElementById('f-price').value=b.price||0;
   document.getElementById('f-pdf-url').value=b.pdfUrl||'';
@@ -332,7 +337,7 @@ window.delBook = async function(id) {
 window.resetForm = function() {
   editId=null;
   ['f-title','f-desc','f-pdf-url','f-img-url'].forEach(i=>document.getElementById(i).value='');
-  document.getElementById('f-cat').value='';
+  document.querySelectorAll('input[name="f-cat-cb"]').forEach(cb => { cb.checked = false; cb.closest('label').style.borderColor = '#e8edf3'; });
   document.getElementById('f-price').value='0';
   document.getElementById('form-title').textContent='➕ הוסף חוברת חדשה';
 };
@@ -344,19 +349,26 @@ window.saveSetting = async function(key, val) {
 };
 
 function renderCatSelect() {
-  const sel = document.getElementById('f-cat');
-  const cur = sel.value;
-  const groups = { 'שנה': 'לפי שנה', 'חג': 'חגים ומועדים', 'אחר': 'אחר' };
-  let html = '<option value="">בחר קטגוריה</option>';
-  for (const [type, label] of Object.entries(groups)) {
-    const group = cats.filter(c => c.type === type);
-    if (group.length) {
-      html += `<optgroup label="${label}">${group.map(c=>`<option value="${c.name}">${c.name}</option>`).join('')}</optgroup>`;
-    }
-  }
-  sel.innerHTML = html;
-  if (cur) sel.value = cur;
+  const container = document.getElementById('f-cats-list');
+  if (!container) return;
+  const selected = getSelectedCats();
+  const groups = { 'שנה': '📅', 'חג': '🕎', 'אחר': '📌' };
+  container.innerHTML = cats.map(c => `
+    <label style="display:inline-flex;align-items:center;gap:5px;background:white;border:2px solid ${selected.includes(c.name)?'#1a3a5c':'#e8edf3'};border-radius:20px;padding:4px 12px;font-size:12px;cursor:pointer;transition:all 0.15s;">
+      <input type="checkbox" name="f-cat-cb" value="${c.name}" ${selected.includes(c.name)?'checked':''} style="cursor:pointer;" onchange="updateCatSelection()"/>
+      ${groups[c.type]||'📌'} ${c.name}
+    </label>
+  `).join('');
 }
+
+function getSelectedCats() {
+  const cbs = document.querySelectorAll('input[name="f-cat-cb"]:checked');
+  return Array.from(cbs).map(cb => cb.value);
+}
+
+window.updateCatSelection = function() {
+  renderCatSelect();
+};
 
 function renderCatList() {
   const typeLabel = { 'שנה': '📅', 'חג': '🕎', 'אחר': '📌' };
