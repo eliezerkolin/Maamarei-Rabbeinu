@@ -214,8 +214,8 @@ function renderTable(){
     <tr>
       <td>
         <div style="display:flex;flex-direction:column;gap:2px;align-items:center">
-          <button class="icon-btn" onclick="moveBook('${b.id}',-1)" style="background:#d9eef9;color:#1a3a5c;font-size:11px;width:22px;height:22px;" ${i===0?'disabled style="opacity:0.3;cursor:default"':''}>↑</button>
-          <button class="icon-btn" onclick="moveBook('${b.id}',1)" style="background:#d9eef9;color:#1a3a5c;font-size:11px;width:22px;height:22px;" ${i===books.length-1?'disabled style="opacity:0.3;cursor:default"':''}>↓</button>
+          <button class="icon-btn" onclick="moveBook(\`${b.id}\`,-1)" style="background:#d9eef9;color:#1a3a5c;font-size:11px;width:22px;height:22px;" ${i===0?'disabled style="opacity:0.3;cursor:default"':''}>↑</button>
+          <button class="icon-btn" onclick="moveBook(\`${b.id}\`,1)" style="background:#d9eef9;color:#1a3a5c;font-size:11px;width:22px;height:22px;" ${i===books.length-1?'disabled style="opacity:0.3;cursor:default"':''}>↓</button>
         </div>
       </td>
       <td><strong>${b.title}</strong></td>
@@ -224,8 +224,8 @@ function renderTable(){
       <td>${b.downloads||0}</td>
       <td><span class="badge ${b.price>0?'badge-paid':'badge-free'}">${b.price>0?'₪'+b.price:'חינם'}</span></td>
       <td>
-        <button class="icon-btn icon-btn-e" onclick="editBook('${b.id}')">✏️</button>
-        <button class="icon-btn icon-btn-d" onclick="delBook('${b.id}')">🗑️</button>
+        <button class="icon-btn icon-btn-e" onclick="editBook(\`${b.id}\`)">✏️</button>
+        <button class="icon-btn icon-btn-d" onclick="delBook(\`${b.id}\`)">🗑️</button>
       </td>
     </tr>
   `).join('');
@@ -363,8 +363,8 @@ function renderCatList() {
   document.getElementById('cat-list').innerHTML = cats.map(c => `
     <div style="display:inline-flex;align-items:center;gap:6px;background:#f4f7fa;border:2px solid #e8edf3;border-radius:20px;padding:5px 12px;font-size:13px;">
       <span>${typeLabel[c.type]||'📌'} ${c.name}</span>
-      <button onclick="editCat('${c.id}')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:0 2px;" title="ערוך">✏️</button>
-      <button onclick="delCat('${c.id}')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:0 2px;" title="מחק">🗑️</button>
+      <button onclick="editCat(\`${c.id}\`)" style="background:none;border:none;cursor:pointer;font-size:13px;padding:0 2px;" title="ערוך">✏️</button>
+      <button onclick="delCat(\`${c.id}\`)" style="background:none;border:none;cursor:pointer;font-size:13px;padding:0 2px;" title="מחק">🗑️</button>
     </div>
   `).join('');
 }
