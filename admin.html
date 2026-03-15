@@ -185,20 +185,22 @@ async function loadSettings() {
   document.getElementById('tg-views').checked = !!cfg.showViews;
   document.getElementById('tg-dl').checked = !!cfg.showDownloads;
 }
-loadSettings();
+function initAdmin() {
+  loadSettings();
 
-// real-time listeners
-onSnapshot(collection(db,'booklets'), snap => {
-  books = snap.docs.map(d=>({id:d.id,...d.data()}));
-  books.sort((a,b)=>(a.order||0)-(b.order||0)||a.title.localeCompare(b.title,'he'));
-  renderStats(); renderTable();
-});
+  // real-time listeners
+  onSnapshot(collection(db,'booklets'), snap => {
+    books = snap.docs.map(d=>({id:d.id,...d.data()}));
+    books.sort((a,b)=>(a.order||0)-(b.order||0)||a.title.localeCompare(b.title,'he'));
+    renderStats(); renderTable();
+  });
 
-onSnapshot(collection(db,'categories'), snap => {
-  cats = snap.docs.map(d=>({id:d.id,...d.data()}));
-  cats.sort((a,b)=>a.name.localeCompare(b.name,'he'));
-  renderCatSelect(); renderCatList();
-});
+  onSnapshot(collection(db,'categories'), snap => {
+    cats = snap.docs.map(d=>({id:d.id,...d.data()}));
+    cats.sort((a,b)=>a.name.localeCompare(b.name,'he'));
+    renderCatSelect(); renderCatList();
+  });
+}
 
 function renderStats(){
   document.getElementById('s-total').textContent=books.length;
@@ -403,10 +405,10 @@ window.resetCat = function() {
 };
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
-</script>
-</div><!-- end admin-content -->
 
-<script type="module">
+
+// ===== LOGIN GATE =====
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -432,6 +434,7 @@ window.checkGate = async function() {
     if (snap.exists() && snap.data().password === entered) {
       document.getElementById('login-gate').style.display = 'none';
       document.getElementById('admin-content').style.display = 'block';
+      initAdmin();
     } else {
       inp.style.borderColor = '#ef4444';
       inp.value = '';
@@ -448,4 +451,5 @@ window.checkGate = async function() {
 // Auto-focus password field
 document.getElementById('gate-pass').focus();
 </script>
+</div><!-- end admin-content -->
 </body></html>
