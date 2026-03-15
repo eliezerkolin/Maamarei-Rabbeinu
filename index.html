@@ -65,7 +65,8 @@
   .booklet-cover-placeholder { width: 75%; aspect-ratio: 3/4; background: white; border-radius: 8px; box-shadow: 0 8px 32px rgba(26,58,92,0.2); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; border: 3px solid var(--gray-200); }
   .booklet-cover-icon { font-size: 36px; margin-bottom: 10px; }
   .booklet-cover-name { font-family: 'Frank Ruhl Libre', serif; font-size: 15px; font-weight: 700; color: var(--navy); line-height: 1.3; }
-  .booklet-category-badge { position: absolute; top: 12px; right: 12px; background: var(--gold); color: var(--navy); padding: 3px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+  .booklet-category-badge { background: var(--gold); color: var(--navy); padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; }
+  .booklet-cover-badges { position: absolute; top: 8px; right: 8px; display: flex; flex-wrap: wrap; gap: 3px; justify-content: flex-end; max-width: 90%; }
   .booklet-body { padding: 18px 18px 14px; flex: 1; display: flex; flex-direction: column; }
   .booklet-title { font-family: 'Frank Ruhl Libre', serif; font-size: 17px; font-weight: 700; color: var(--navy); margin-bottom: 6px; line-height: 1.3; }
   .booklet-desc { font-size: 13px; color: var(--gray-700); line-height: 1.6; flex: 1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
@@ -279,8 +280,22 @@ function updateHeroStats() {
 }
 
 // ===== FILTERS =====
+function getAllCats(bookList) {
+  const set = new Set();
+  bookList.forEach(b => {
+    const cats = Array.isArray(b.categories) ? b.categories : (b.category ? [b.category] : []);
+    cats.forEach(c => set.add(c));
+  });
+  return [...set];
+}
+
+function bookHasCat(b, cat) {
+  const cats = Array.isArray(b.categories) ? b.categories : (b.category ? [b.category] : []);
+  return cats.includes(cat);
+}
+
 function renderFilters() {
-  const cats = [...new Set(booklets.map(b => b.category).filter(Boolean))];
+  const cats = getAllCats(booklets);
   const yearRe = /תש/;
   const years = cats.filter(c => yearRe.test(c));
   const topics = cats.filter(c => !yearRe.test(c));
@@ -311,9 +326,12 @@ window.setFilter = function(btn, type) {
 function applyFilters() {
   const q = (document.getElementById('search-input').value||'').toLowerCase();
   let list = booklets;
-  if (activeYear !== 'הכל') list = list.filter(b => b.category === activeYear);
-  if (activeTopic !== 'הכל') list = list.filter(b => b.category === activeTopic);
-  if (q) list = list.filter(b => b.title.toLowerCase().includes(q) || (b.category||'').toLowerCase().includes(q) || (b.desc||'').toLowerCase().includes(q));
+  if (activeYear !== 'הכל') list = list.filter(b => bookHasCat(b, activeYear));
+  if (activeTopic !== 'הכל') list = list.filter(b => bookHasCat(b, activeTopic));
+  if (q) {
+    const allCatsStr = b => (Array.isArray(b.categories) ? b.categories : (b.category ? [b.category] : [])).join(' ');
+    list = list.filter(b => b.title.toLowerCase().includes(q) || allCatsStr(b).toLowerCase().includes(q) || (b.desc||'').toLowerCase().includes(q));
+  }
   renderBooklets(list);
 }
 
@@ -330,7 +348,7 @@ function renderBooklets(list) {
     <div class="booklet-card" onclick="openBooklet('${b.id}')">
       <div class="booklet-cover">
         ${b.imgUrl ? `<img src="${b.imgUrl}" alt="${b.title}" />` : `<div class="booklet-cover-placeholder"><div class="booklet-cover-icon">📄</div><div class="booklet-cover-name">${b.title}</div></div>`}
-        ${b.category ? `<span class="booklet-category-badge">${b.category}</span>` : ''}
+        <div class="booklet-cover-badges">${(Array.isArray(b.categories) ? b.categories : (b.category ? [b.category] : [])).map(c => `<span class="booklet-category-badge">${c}</span>`).join('')}</div>
       </div>
       <div class="booklet-body">
         <div class="booklet-title">${b.title}</div>
