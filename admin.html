@@ -124,7 +124,7 @@ input:checked+.slider{background:#1a3a5c}input:checked+.slider:before{transform:
     <div class="card" style="overflow-x:auto">
       <h3>📋 רשימת חוברות</h3>
       <table class="tbl">
-        <thead><tr><th>שם</th><th>קטגוריה</th><th>צפיות</th><th>הורדות</th><th>מחיר</th><th>פעולות</th></tr></thead>
+        <thead><tr><th>סדר</th><th>שם</th><th>קטגוריה</th><th>צפיות</th><th>הורדות</th><th>מחיר</th><th>פעולות</th></tr></thead>
         <tbody id="tbl-body"></tbody>
       </table>
     </div>
@@ -208,8 +208,14 @@ function renderStats(){
 }
 
 function renderTable(){
-  document.getElementById('tbl-body').innerHTML=books.map(b=>`
+  document.getElementById('tbl-body').innerHTML=books.map((b,i)=>`
     <tr>
+      <td>
+        <div style="display:flex;flex-direction:column;gap:2px;align-items:center">
+          <button class="icon-btn" onclick="moveBook('${b.id}',-1)" style="background:#d9eef9;color:#1a3a5c;font-size:11px;width:22px;height:22px;" ${i===0?'disabled style="opacity:0.3;cursor:default"':''}>↑</button>
+          <button class="icon-btn" onclick="moveBook('${b.id}',1)" style="background:#d9eef9;color:#1a3a5c;font-size:11px;width:22px;height:22px;" ${i===books.length-1?'disabled style="opacity:0.3;cursor:default"':''}>↓</button>
+        </div>
+      </td>
       <td><strong>${b.title}</strong></td>
       <td>${b.category||''}</td>
       <td>${b.views||0}</td>
@@ -280,7 +286,26 @@ window.saveBook = async function() {
   document.getElementById('save-btn').disabled=false;
 };
 
-window.editBook = function(id) {
+window.moveBook = async function(id, direction) {
+  const idx = books.findIndex(b => b.id === id);
+  const swapIdx = idx + direction;
+  if (swapIdx < 0 || swapIdx >= books.length) return;
+
+  const a = books[idx];
+  const b = books[swapIdx];
+
+  // Assign order values if not set
+  const orderA = a.order !== undefined ? a.order : idx;
+  const orderB = b.order !== undefined ? b.order : swapIdx;
+
+  try {
+    await setDoc(doc(db,'booklets',a.id), { order: orderB }, { merge: true });
+    await setDoc(doc(db,'booklets',b.id), { order: orderA }, { merge: true });
+    showToast('✅ סדר עודכן');
+  } catch(e) {
+    showToast('❌ שגיאה בעדכון סדר');
+  }
+};
   const b=books.find(x=>x.id===id); editId=id;
   document.getElementById('f-title').value=b.title||'';
   document.getElementById('f-cat').value=b.category||'';
