@@ -132,7 +132,7 @@ input:checked+.slider{background:#1a3a5c}input:checked+.slider:before{transform:
     <div class="card" style="overflow-x:auto">
       <h3>📋 רשימת חוברות</h3>
       <table class="tbl">
-        <thead><tr><th>סדר</th><th>שם</th><th>קטגוריה</th><th>צפיות</th><th>הורדות</th><th>מחיר</th><th>פעולות</th></tr></thead>
+        <thead><tr><th>סדר</th><th>שם</th><th>קטגוריה</th><th>מחיר</th><th>פעולות</th></tr></thead>
         <tbody id="tbl-body"></tbody>
       </table>
     </div>
@@ -275,10 +275,11 @@ function initAdmin() {
 }
 
 function renderStats(){
-  document.getElementById('s-total').textContent=books.length;
-  document.getElementById('s-views').textContent=books.reduce((s,b)=>s+(b.views||0),0).toLocaleString();
-  document.getElementById('s-dl').textContent=books.reduce((s,b)=>s+(b.downloads||0),0).toLocaleString();
-  document.getElementById('s-paid').textContent=books.filter(b=>b.price>0).length;
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('s-total', books.length);
+  set('s-views', books.reduce((s,b)=>s+(b.views||0),0).toLocaleString());
+  set('s-dl', books.reduce((s,b)=>s+(b.downloads||0),0).toLocaleString());
+  set('s-paid', books.filter(b=>b.price>0).length);
 }
 
 function renderTable(){
@@ -292,8 +293,6 @@ function renderTable(){
       </td>
       <td><strong>${b.title}</strong></td>
       <td>${(Array.isArray(b.categories)?b.categories:(b.category?[b.category]:[])).join(', ')||''}</td>
-      <td>${b.views||0}</td>
-      <td>${b.downloads||0}</td>
       <td><span class="badge ${b.price>0?'badge-paid':'badge-free'}">${b.price>0?'₪'+b.price:'חינם'}</span></td>
       <td>
         <button class="icon-btn icon-btn-e" onclick="editBook(\`${b.id}\`)">✏️</button>
