@@ -225,7 +225,10 @@ input:checked+.slider{background:#1a3a5c}input:checked+.slider:before{transform:
     </div>
     <div id="stats-table-wrap"></div>
     <div id="stats-chart-wrap" style="display:none;"><canvas id="stats-chart" height="300"></canvas></div>
-    <div id="stats-timeline-wrap" style="display:none;"><canvas id="stats-timeline-chart" height="250"></canvas></div>
+    <div id="stats-timeline-wrap" style="display:none;">
+      <div id="booklet-selector-wrap" style="display:none;margin-bottom:14px;padding:12px;background:#f4f7fa;border-radius:10px;"></div>
+      <canvas id="stats-timeline-chart" height="250"></canvas>
+    </div>
   </div>
 
   <!-- Smart Insights -->
@@ -696,8 +699,12 @@ window.resetAllStats = async function() {
   }
 };
 
-let visitsChartInstance = null;
-let activityChartInstance = null;
+// ===== TIMELINE CHARTS =====
+let timelineChartInstance = null;
+let cachedVisitsData = null;
+let cachedBookletData = {}; // bookletId -> [{date, views, downloads}]
+let selectedBooklets = new Set();
+let currentTimelineType = null;
 
 function getDaysArray(days) {
   const result = [];
@@ -714,93 +721,6 @@ function formatDateLabel(dateStr) {
   return `${d}/${m}`;
 }
 
-async function loadVisitsChart(days) {
-  await ensureChart();
-  const snap = await getDocs(collection(db, 'site_stats'));
-  const dataMap = {};
-  snap.docs.forEach(d => { dataMap[d.id] = d.data().visits || 0; });
-  const dates = getDaysArray(days);
-  const values = dates.map(d => dataMap[d] || 0);
-
-  const canvas = document.getElementById('stats-timeline-chart');
-  if (visitsChartInstance) visitsChartInstance.destroy();
-  visitsChartInstance = new Chart(canvas, {
-    type: 'line',
-    data: {
-      labels: dates.map(formatDateLabel),
-      datasets: [{
-        label: 'כניסות',
-        data: values,
-        borderColor: '#8b5cf6',
-        backgroundColor: 'rgba(139,92,246,0.1)',
-        tension: 0.3,
-        fill: true,
-        pointRadius: 4,
-        pointBackgroundColor: '#8b5cf6'
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { font: { family: 'Heebo' } } },
-        y: { beginAtZero: true, ticks: { stepSize: 1 } }
-      }
-    }
-  });
-}
-
-async function loadActivityChart(days) {
-  await ensureChart();
-  const dates = getDaysArray(days);
-  const viewsMap = {}, dlMap = {};
-
-  // Aggregate across all booklets
-  for (const b of books) {
-    try {
-      const snap = await getDocs(collection(db, `booklet_stats/${b.id}/daily`));
-      snap.docs.forEach(d => {
-        const date = d.id;
-        viewsMap[date] = (viewsMap[date] || 0) + (d.data().views || 0);
-        dlMap[date] = (dlMap[date] || 0) + (d.data().downloads || 0);
-      });
-    } catch(e) {}
-  }
-
-  const canvas = document.getElementById('stats-timeline-chart');
-  if (activityChartInstance) activityChartInstance.destroy();
-  activityChartInstance = new Chart(canvas, {
-    type: 'line',
-    data: {
-      labels: dates.map(formatDateLabel),
-      datasets: [
-        {
-          label: 'צפיות',
-          data: dates.map(d => viewsMap[d] || 0),
-          borderColor: '#e8c840',
-          backgroundColor: 'rgba(232,200,64,0.1)',
-          tension: 0.3, fill: true, pointRadius: 4, pointBackgroundColor: '#e8c840'
-        },
-        {
-          label: 'הורדות',
-          data: dates.map(d => dlMap[d] || 0),
-          borderColor: '#22c55e',
-          backgroundColor: 'rgba(34,197,94,0.1)',
-          tension: 0.3, fill: true, pointRadius: 4, pointBackgroundColor: '#22c55e'
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { position: 'top' } },
-      scales: {
-        x: { ticks: { font: { family: 'Heebo' } } },
-        y: { beginAtZero: true, ticks: { stepSize: 1 } }
-      }
-    }
-  });
-}
-
 async function ensureChart() {
   if (!window.Chart) {
     await new Promise((resolve) => {
@@ -810,6 +730,134 @@ async function ensureChart() {
       document.head.appendChild(s);
     });
   }
+}
+
+async function preloadTimelineData() {
+  // Load visits
+  if (!cachedVisitsData) {
+    try {
+      const snap = await getDocs(collection(db, 'site_stats'));
+      cachedVisitsData = {};
+      snap.docs.forEach(d => { cachedVisitsData[d.id] = d.data().visits || 0; });
+    } catch(e) { cachedVisitsData = {}; }
+  }
+  // Load booklet daily stats
+  for (const b of books) {
+    if (!cachedBookletData[b.id]) {
+      try {
+        const snap = await getDocs(collection(db, `booklet_stats/${b.id}/daily`));
+        cachedBookletData[b.id] = {};
+        snap.docs.forEach(d => {
+          cachedBookletData[b.id][d.id] = { views: d.data().views||0, downloads: d.data().downloads||0 };
+        });
+      } catch(e) { cachedBookletData[b.id] = {}; }
+    }
+  }
+}
+
+function renderTimelineChart(type, days) {
+  currentTimelineType = type;
+  const dates = getDaysArray(days);
+  const labels = dates.map(formatDateLabel);
+  const canvas = document.getElementById('stats-timeline-chart');
+  if (timelineChartInstance) timelineChartInstance.destroy();
+
+  let datasets = [];
+
+  if (type === 'visits') {
+    datasets = [{
+      label: 'כניסות',
+      data: dates.map(d => cachedVisitsData?.[d] || 0),
+      borderColor: '#8b5cf6',
+      backgroundColor: 'rgba(139,92,246,0.1)',
+      tension: 0.3, fill: true, pointRadius: 4, pointBackgroundColor: '#8b5cf6'
+    }];
+  } else {
+    // activity: show selected booklets or all aggregated
+    const colors = ['#e8c840','#22c55e','#3b82f6','#f97316','#ef4444','#06b6d4','#8b5cf6','#ec4899'];
+    const toShow = selectedBooklets.size > 0
+      ? books.filter(b => selectedBooklets.has(b.id))
+      : null; // null = aggregate all
+
+    if (!toShow) {
+      // Aggregate all
+      const viewsMap = {}, dlMap = {};
+      Object.values(cachedBookletData).forEach(bData => {
+        Object.entries(bData).forEach(([date, vals]) => {
+          viewsMap[date] = (viewsMap[date]||0) + vals.views;
+          dlMap[date] = (dlMap[date]||0) + vals.downloads;
+        });
+      });
+      datasets = [
+        { label: 'צפיות', data: dates.map(d=>viewsMap[d]||0), borderColor: '#e8c840', backgroundColor: 'rgba(232,200,64,0.1)', tension: 0.3, fill: true, pointRadius: 4, pointBackgroundColor: '#e8c840' },
+        { label: 'הורדות', data: dates.map(d=>dlMap[d]||0), borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', tension: 0.3, fill: true, pointRadius: 4, pointBackgroundColor: '#22c55e' }
+      ];
+    } else {
+      toShow.forEach((b, i) => {
+        const bData = cachedBookletData[b.id] || {};
+        const col = colors[i % colors.length];
+        datasets.push({
+          label: b.title.slice(0,20),
+          data: dates.map(d => (bData[d]?.views || 0)),
+          borderColor: col,
+          backgroundColor: col + '22',
+          tension: 0.3, fill: false, pointRadius: 3, pointBackgroundColor: col
+        });
+      });
+    }
+  }
+
+  timelineChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'top', labels: { font: { family: 'Heebo' } } } },
+      scales: {
+        x: { ticks: { font: { family: 'Heebo' } } },
+        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+      }
+    }
+  });
+}
+
+function renderBookletSelector() {
+  const wrap = document.getElementById('booklet-selector-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = `
+    <div style="font-size:12px;color:#8fa3b8;margin-bottom:6px;">בחר חוברות להציג (ריק = כולן מאוחדות):</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      ${books.map(b => `
+        <label style="display:inline-flex;align-items:center;gap:4px;background:white;border:2px solid ${selectedBooklets.has(b.id)?'#1a3a5c':'#e8edf3'};border-radius:16px;padding:3px 10px;font-size:11px;cursor:pointer;">
+          <input type="checkbox" ${selectedBooklets.has(b.id)?'checked':''} onchange="toggleBookletSelect('${b.id}',this.checked)" style="cursor:pointer;"/>
+          ${b.title.slice(0,18)}
+        </label>
+      `).join('')}
+    </div>`;
+}
+
+window.toggleBookletSelect = function(id, checked) {
+  if (checked) selectedBooklets.add(id);
+  else selectedBooklets.delete(id);
+  renderBookletSelector();
+  renderTimelineChart('activity', currentTimelineDays);
+};
+
+async function loadVisitsChart(days) {
+  await ensureChart();
+  await preloadTimelineData();
+  renderTimelineChart('visits', days);
+  const wrap = document.getElementById('booklet-selector-wrap');
+  if (wrap) wrap.style.display = 'none';
+}
+
+async function loadActivityChart(days) {
+  await ensureChart();
+  await preloadTimelineData();
+  renderBookletSelector();
+  const wrap = document.getElementById('booklet-selector-wrap');
+  if (wrap) wrap.style.display = 'block';
+  renderTimelineChart('activity', days);
 }
 
 window.setChartDays = async function(btn, days, chartId) {
@@ -978,9 +1026,14 @@ async function loadVisits() {
 }
 
 function initStatsTab() {
+  cachedVisitsData = null;
+  cachedBookletData = {};
+  selectedBooklets = new Set();
   renderStatsContent();
   calcInsights();
   loadVisits();
+  // Preload Chart.js and data in background
+  ensureChart().then(() => preloadTimelineData()).catch(() => {});
 }
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
