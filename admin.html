@@ -208,40 +208,24 @@ input:checked+.slider{background:#1a3a5c}input:checked+.slider:before{transform:
     </div>
   </div>
 
-  <!-- Time series graphs -->
+  <!-- Unified data card -->
   <div class="card" style="margin-bottom:20px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
-      <h3 style="margin:0;">📈 כניסות לאתר לאורך זמן</h3>
-      <div style="display:flex;gap:6px;">
-        <button class="range-btn active" data-days="7" onclick="setChartDays(this,7,'visits-chart')">7 ימים</button>
-        <button class="range-btn" data-days="30" onclick="setChartDays(this,30,'visits-chart')">30 ימים</button>
-      </div>
-    </div>
-    <canvas id="visits-chart" height="200"></canvas>
-  </div>
-
-  <div class="card" style="margin-bottom:20px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
-      <h3 style="margin:0;">📈 צפיות והורדות לאורך זמן</h3>
-      <div style="display:flex;gap:6px;">
-        <button class="range-btn active" data-days="7" onclick="setChartDays(this,7,'activity-chart')">7 ימים</button>
-        <button class="range-btn" data-days="30" onclick="setChartDays(this,30,'activity-chart')">30 ימים</button>
-      </div>
-    </div>
-    <canvas id="activity-chart" height="200"></canvas>
-  </div>
-
-  <!-- Table / Chart -->
-  <div class="card" style="margin-bottom:20px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
-      <h3 style="margin:0;">📋 נתונים לפי חוברת</h3>
-      <div style="display:flex;gap:6px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px;">
+      <h3 style="margin:0;">📊 נתונים</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="view-btn active" data-view="table" onclick="setView(this)">📋 טבלה</button>
-        <button class="view-btn" data-view="chart" onclick="setView(this)">📊 גרף</button>
+        <button class="view-btn" data-view="chart" onclick="setView(this)">📊 גרף חוברות</button>
+        <button class="view-btn" data-view="timeline-activity" onclick="setView(this)">📈 צפיות/הורדות</button>
+        <button class="view-btn" data-view="timeline-visits" onclick="setView(this)">📈 כניסות</button>
       </div>
+    </div>
+    <div id="timeline-days-wrap" style="display:none;margin-bottom:12px;gap:6px;">
+      <button class="range-btn active" data-days="7" onclick="setTimelineDays(this,7)">7 ימים</button>
+      <button class="range-btn" data-days="30" onclick="setTimelineDays(this,30)">30 ימים</button>
     </div>
     <div id="stats-table-wrap"></div>
     <div id="stats-chart-wrap" style="display:none;"><canvas id="stats-chart" height="300"></canvas></div>
+    <div id="stats-timeline-wrap" style="display:none;"><canvas id="stats-timeline-chart" height="250"></canvas></div>
   </div>
 
   <!-- Smart Insights -->
@@ -550,9 +534,28 @@ window.setView = function(btn) {
   document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   currentView = btn.dataset.view;
-  document.getElementById('stats-table-wrap').style.display = currentView==='table' ? 'block' : 'none';
-  document.getElementById('stats-chart-wrap').style.display = currentView==='chart' ? 'block' : 'none';
-  renderStatsContent();
+  const tableWrap = document.getElementById('stats-table-wrap');
+  const chartWrap = document.getElementById('stats-chart-wrap');
+  const timelineWrap = document.getElementById('stats-timeline-wrap');
+  const daysWrap = document.getElementById('timeline-days-wrap');
+
+  tableWrap.style.display = currentView === 'table' ? 'block' : 'none';
+  chartWrap.style.display = currentView === 'chart' ? 'block' : 'none';
+  timelineWrap.style.display = (currentView === 'timeline-activity' || currentView === 'timeline-visits') ? 'block' : 'none';
+  daysWrap.style.display = (currentView === 'timeline-activity' || currentView === 'timeline-visits') ? 'flex' : 'none';
+
+  if (currentView === 'table' || currentView === 'chart') renderStatsContent();
+  else if (currentView === 'timeline-activity') loadActivityChart(7);
+  else if (currentView === 'timeline-visits') loadVisitsChart(7);
+};
+
+let currentTimelineDays = 7;
+window.setTimelineDays = async function(btn, days) {
+  document.querySelectorAll('#timeline-days-wrap .range-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentTimelineDays = days;
+  if (currentView === 'timeline-activity') await loadActivityChart(days);
+  else if (currentView === 'timeline-visits') await loadVisitsChart(days);
 };
 
 async function getBookletStats(bookId) {
@@ -719,7 +722,7 @@ async function loadVisitsChart(days) {
   const dates = getDaysArray(days);
   const values = dates.map(d => dataMap[d] || 0);
 
-  const canvas = document.getElementById('visits-chart');
+  const canvas = document.getElementById('stats-timeline-chart');
   if (visitsChartInstance) visitsChartInstance.destroy();
   visitsChartInstance = new Chart(canvas, {
     type: 'line',
@@ -764,7 +767,7 @@ async function loadActivityChart(days) {
     } catch(e) {}
   }
 
-  const canvas = document.getElementById('activity-chart');
+  const canvas = document.getElementById('stats-timeline-chart');
   if (activityChartInstance) activityChartInstance.destroy();
   activityChartInstance = new Chart(canvas, {
     type: 'line',
@@ -978,8 +981,6 @@ function initStatsTab() {
   renderStatsContent();
   calcInsights();
   loadVisits();
-  loadVisitsChart(7);
-  loadActivityChart(7);
 }
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
