@@ -208,6 +208,29 @@ input:checked+.slider{background:#1a3a5c}input:checked+.slider:before{transform:
     </div>
   </div>
 
+  <!-- Time series graphs -->
+  <div class="card" style="margin-bottom:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+      <h3 style="margin:0;">📈 כניסות לאתר לאורך זמן</h3>
+      <div style="display:flex;gap:6px;">
+        <button class="range-btn active" data-days="7" onclick="setChartDays(this,7,'visits-chart')">7 ימים</button>
+        <button class="range-btn" data-days="30" onclick="setChartDays(this,30,'visits-chart')">30 ימים</button>
+      </div>
+    </div>
+    <canvas id="visits-chart" height="200"></canvas>
+  </div>
+
+  <div class="card" style="margin-bottom:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+      <h3 style="margin:0;">📈 צפיות והורדות לאורך זמן</h3>
+      <div style="display:flex;gap:6px;">
+        <button class="range-btn active" data-days="7" onclick="setChartDays(this,7,'activity-chart')">7 ימים</button>
+        <button class="range-btn" data-days="30" onclick="setChartDays(this,30,'activity-chart')">30 ימים</button>
+      </div>
+    </div>
+    <canvas id="activity-chart" height="200"></canvas>
+  </div>
+
   <!-- Table / Chart -->
   <div class="card" style="margin-bottom:20px;">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
@@ -670,7 +693,129 @@ window.resetAllStats = async function() {
   }
 };
 
-async function calcInsights() {
+let visitsChartInstance = null;
+let activityChartInstance = null;
+
+function getDaysArray(days) {
+  const result = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    result.push(d.toLocaleDateString('sv-SE', {timeZone:'Asia/Jerusalem'}));
+  }
+  return result;
+}
+
+function formatDateLabel(dateStr) {
+  const [y, m, d] = dateStr.split('-');
+  return `${d}/${m}`;
+}
+
+async function loadVisitsChart(days) {
+  await ensureChart();
+  const snap = await getDocs(collection(db, 'site_stats'));
+  const dataMap = {};
+  snap.docs.forEach(d => { dataMap[d.id] = d.data().visits || 0; });
+  const dates = getDaysArray(days);
+  const values = dates.map(d => dataMap[d] || 0);
+
+  const canvas = document.getElementById('visits-chart');
+  if (visitsChartInstance) visitsChartInstance.destroy();
+  visitsChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: dates.map(formatDateLabel),
+      datasets: [{
+        label: 'כניסות',
+        data: values,
+        borderColor: '#8b5cf6',
+        backgroundColor: 'rgba(139,92,246,0.1)',
+        tension: 0.3,
+        fill: true,
+        pointRadius: 4,
+        pointBackgroundColor: '#8b5cf6'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { font: { family: 'Heebo' } } },
+        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+      }
+    }
+  });
+}
+
+async function loadActivityChart(days) {
+  await ensureChart();
+  const dates = getDaysArray(days);
+  const viewsMap = {}, dlMap = {};
+
+  // Aggregate across all booklets
+  for (const b of books) {
+    try {
+      const snap = await getDocs(collection(db, `booklet_stats/${b.id}/daily`));
+      snap.docs.forEach(d => {
+        const date = d.id;
+        viewsMap[date] = (viewsMap[date] || 0) + (d.data().views || 0);
+        dlMap[date] = (dlMap[date] || 0) + (d.data().downloads || 0);
+      });
+    } catch(e) {}
+  }
+
+  const canvas = document.getElementById('activity-chart');
+  if (activityChartInstance) activityChartInstance.destroy();
+  activityChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: dates.map(formatDateLabel),
+      datasets: [
+        {
+          label: 'צפיות',
+          data: dates.map(d => viewsMap[d] || 0),
+          borderColor: '#e8c840',
+          backgroundColor: 'rgba(232,200,64,0.1)',
+          tension: 0.3, fill: true, pointRadius: 4, pointBackgroundColor: '#e8c840'
+        },
+        {
+          label: 'הורדות',
+          data: dates.map(d => dlMap[d] || 0),
+          borderColor: '#22c55e',
+          backgroundColor: 'rgba(34,197,94,0.1)',
+          tension: 0.3, fill: true, pointRadius: 4, pointBackgroundColor: '#22c55e'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'top' } },
+      scales: {
+        x: { ticks: { font: { family: 'Heebo' } } },
+        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+      }
+    }
+  });
+}
+
+async function ensureChart() {
+  if (!window.Chart) {
+    await new Promise((resolve) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
+      s.onload = resolve;
+      document.head.appendChild(s);
+    });
+  }
+}
+
+window.setChartDays = async function(btn, days, chartId) {
+  const parent = btn.closest('.card');
+  parent.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (chartId === 'visits-chart') await loadVisitsChart(days);
+  else await loadActivityChart(days);
+};
   const result = document.getElementById('insights-result');
   if (!books.length) { result.innerHTML = '<div style="color:#8fa3b8;text-align:center;padding:20px;">אין נתונים עדיין</div>'; return; }
 
@@ -831,6 +976,8 @@ function initStatsTab() {
   renderStatsContent();
   calcInsights();
   loadVisits();
+  loadVisitsChart(7);
+  loadActivityChart(7);
 }
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
