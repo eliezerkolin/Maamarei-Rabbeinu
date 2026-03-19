@@ -226,6 +226,15 @@ input:checked+.slider{background:#1a3a5c}input:checked+.slider:before{transform:
     <h3>💡 תובנות</h3>
     <div id="insights-result"></div>
   </div>
+
+  <!-- Reset button -->
+  <div class="card" style="margin-top:20px;padding:16px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border:2px solid #fee2e2;">
+    <div>
+      <div style="font-family:'Frank Ruhl Libre',serif;font-size:15px;font-weight:700;color:#ef4444;">🗑️ איפוס נתונים לפני השקה</div>
+      <div style="font-size:12px;color:#8fa3b8;margin-top:4px;">מאפס צפיות, הורדות וכניסות לאתר. לא מאפס התקנות PWA.</div>
+    </div>
+    <button onclick="resetAllStats()" style="padding:10px 20px;background:#ef4444;color:white;border:none;border-radius:10px;font-family:Heebo,sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">🗑️ אפס הכל</button>
+  </div>
 </main>
 </div><!-- end tab-stats -->
 
@@ -627,7 +636,39 @@ function buildChart(data, canvas) {
   });
 }
 
-async function calcInsights() {
+window.resetAllStats = async function() {
+  if (!confirm('האם לאפס את כל הצפיות, ההורדות וכניסות לאתר?\n\nפעולה זו בלתי הפיכה!')) return;
+  if (!confirm('בטוח לגמרי?')) return;
+
+  const btn = event.target;
+  btn.textContent = '⏳ מאפס...';
+  btn.disabled = true;
+
+  try {
+    // Reset views & downloads on all booklets
+    for (const b of books) {
+      await setDoc(doc(db, 'booklets', b.id), { views: 0, downloads: 0 }, { merge: true });
+    }
+
+    // Delete all daily booklet stats
+    for (const b of books) {
+      const snap = await getDocs(collection(db, `booklet_stats/${b.id}/daily`));
+      for (const d of snap.docs) await deleteDoc(d.ref);
+    }
+
+    // Delete all site_stats (visits)
+    const siteSnap = await getDocs(collection(db, 'site_stats'));
+    for (const d of siteSnap.docs) await deleteDoc(d.ref);
+
+    showToast('✅ כל הנתונים אופסו בהצלחה!');
+    btn.textContent = '✅ אופס!';
+    setTimeout(() => initStatsTab(), 1000);
+  } catch(e) {
+    showToast('❌ שגיאה באיפוס');
+    btn.textContent = '🗑️ אפס הכל';
+    btn.disabled = false;
+  }
+};
   const result = document.getElementById('insights-result');
   if (!books.length) { result.innerHTML = '<div style="color:#8fa3b8;text-align:center;padding:20px;">אין נתונים עדיין</div>'; return; }
 
@@ -725,7 +766,7 @@ window.saveAllHistory = async function() {
   const btn = document.getElementById('save-history-btn');
   btn.textContent = '⏳ שומר...';
   btn.disabled = true;
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toLocaleDateString('sv-SE', {timeZone:'Asia/Jerusalem'});
   let saved = 0;
   try {
     for (const b of books) {
