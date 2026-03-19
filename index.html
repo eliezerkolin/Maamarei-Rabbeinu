@@ -213,6 +213,13 @@
 
 <footer>
   <span class="brand">סיכומים במאמרי רבינו</span> · מאמרי הרבי בשפה ברורה ופשוטה · כל הזכויות שמורות ©
+  <br/>
+  <span style="font-size:11px;opacity:0.6;margin-top:6px;display:block;">
+    עיצוב ופיתוח: אליעזר קולין ·
+    <a href="https://wa.me/972549055423" target="_blank" style="color:rgba(255,255,255,0.6);text-decoration:none;">
+      📱 וואטסאפ
+    </a>
+  </span>
   <span class="header-admin-btn" onclick="window.location.href='admin.html'" title="כניסת מנהל" style="cursor:pointer;opacity:0.35;font-size:18px;transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.35'">⚙️</span>
 </footer>
 
@@ -266,7 +273,7 @@ let activeTopic = 'הכל';
 async function init() {
   // Count visit + device
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('sv-SE', {timeZone:'Asia/Jerusalem'});
     const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
     const isPWA = window.matchMedia('(display-mode: standalone)').matches;
     const device = isPWA ? 'pwa' : isMobile ? 'mobile' : 'desktop';
@@ -413,7 +420,7 @@ function renderBooklets(list) {
 window.openBooklet = async function(id) {
   const b = booklets.find(x => x.id === id);
   if (!b) return;
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toLocaleDateString('sv-SE', {timeZone:'Asia/Jerusalem'});
   try {
     await updateDoc(doc(db,'booklets',id), { views: (b.views||0)+1 });
     await setDoc(doc(db,`booklet_stats/${id}/daily`,today), { views: increment(1) }, { merge: true });
@@ -436,7 +443,7 @@ window.downloadBooklet = async function(id) {
   if (!b) return;
   if (b.price > 0) { showToast('🛒 עמוד רכישה בקרוב'); return; }
   if (!b.pdfUrl) { showToast('📋 PDF לא הועלה עדיין'); return; }
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toLocaleDateString('sv-SE', {timeZone:'Asia/Jerusalem'});
   try {
     await updateDoc(doc(db,'booklets',id), { downloads: (b.downloads||0)+1 });
     await setDoc(doc(db,`booklet_stats/${id}/daily`,today), { downloads: increment(1) }, { merge: true });
